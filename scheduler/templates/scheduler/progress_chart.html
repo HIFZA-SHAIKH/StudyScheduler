@@ -1,0 +1,245 @@
+{% extends 'scheduler/base.html' %}
+{% load static %}
+
+{% block extra_css %}
+<style>
+    .chart-container {
+        position: relative;
+        height: 500px;
+        width: 100%;
+        margin: 20px 0;
+    }
+    .card {
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        margin-bottom: 20px;
+    }
+    .refresh-indicator {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        font-size: 14px;
+        color: #666;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2 class="mb-4">Study Progress for {{ username }}</h2>
+    
+    <div class="card">
+        <div class="card-body">
+            <h5 class="card-title">Study Progress Line Chart</h5>
+            <div class="refresh-indicator">Auto-refreshing every 30 seconds</div>
+            <div class="chart-container">
+                <canvas id="progressChart"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    let progressChart = null;
+
+    function updateChart() {
+        // Fetch new data from the server
+        fetch(window.location.href)
+            .then(response => response.text())
+            .then(html => {
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(html, 'text/html');
+                
+                // Extract the new data from the response
+                const newTopicNames = JSON.parse(doc.querySelector('script').textContent.match(/topicNames = (\[.*?\]);/)[1]);
+                const newTopicHours = JSON.parse(doc.querySelector('script').textContent.match(/topicHours = (\[.*?\]);/)[1]);
+                const newTopicCompleted = JSON.parse(doc.querySelector('script').textContent.match(/topicCompleted = (\[.*?\]);/)[1]);
+                
+                // Update chart data
+                progressChart.data.labels = newTopicNames;
+                progressChart.data.datasets[0].data = newTopicHours;
+                
+                // Update point colors
+                progressChart.data.datasets[0].pointBackgroundColor = newTopicNames.map((label, index) => {
+                    if (label.startsWith('📚')) {
+                        return 'rgb(54, 162, 235)';
+                    }
+                    return newTopicCompleted[index] ? 'rgb(75, 192, 192)' : 'rgb(255, 99, 132)';
+                });
+                
+                progressChart.data.datasets[0].pointBorderColor = progressChart.data.datasets[0].pointBackgroundColor;
+                
+                // Update the chart
+                progressChart.update();
+            })
+            .catch(error => console.error('Error updating chart:', error));
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        // Parse the Django template variables
+        const topicNames = JSON.parse('{{ topic_names|escapejs }}');
+        const topicHours = JSON.parse('{{ topic_hours|escapejs }}');
+        const topicCompleted = JSON.parse('{{ topic_completed|escapejs }}');
+        
+        // Check if we have data
+        if (topicNames.length === 0) {
+            document.querySelector('.chart-container').innerHTML = 
+                '<div class="alert alert-warning">No data available for the chart. Please add study time to topics first.</div>';
+            return;
+        }
+
+        // Create the line chart
+        const ctx = document.getElementById('progressChart').getContext('2d');
+        progressChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: topicNames,
+                datasets: [{
+                    label: 'Cumulative Hours Spent',
+                    data: topicHours,
+                    borderColor: 'rgb(75, 192, 192)',
+                    backgroundColor: 'rgba(75, 192, 192, 0.1)',
+                    tension: 0.3,
+                    fill: true,
+                    pointRadius: function(context) {
+                        const label = context.raw.label || '';
+                        return label.startsWith('📚') ? 8 : 6;
+                    },
+                    pointHoverRadius: function(context) {
+                        const label = context.raw.label || '';
+                        return label.startsWith('📚') ? 10 : 8;
+                    },
+                    pointStyle: function(context) {
+                        const label = context.raw.label || '';
+                        return label.startsWith('📚') ? 'rect' : 'circle';
+                    },
+                    borderWidth: 2,
+                    pointBackgroundColor: function(context) {
+                        const index = context.dataIndex;
+                        const label = topicNames[index];
+                        
+                        if (label.startsWith('📚')) {
+                            return 'rgb(54, 162, 235)';
+                        }
+                        
+                        return topicCompleted[index] ? 'rgb(75, 192, 192)' : 'rgb(255, 99, 132)';
+                    },
+                    pointBorderColor: function(context) {
+                        const index = context.dataIndex;
+                        const label = topicNames[index];
+                        
+                        if (label.startsWith('📚')) {
+                            return 'rgb(54, 162, 235)';
+                        }
+                        
+                        return topicCompleted[index] ? 'rgb(75, 192, 192)' : 'rgb(255, 99, 132)';
+                    }
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    title: {
+                        display: true,
+                        text: 'Study Time Progress by Subject and Topic',
+                        font: {
+                            size: 18,
+                            weight: 'bold'
+                        },
+                        padding: 20
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                const index = context.dataIndex;
+                                const label = topicNames[index];
+                                const hours = context.parsed.y;
+                                const prevHours = index > 0 ? topicHours[index - 1] : 0;
+                                const hoursIncrement = hours - prevHours;
+                                
+                                if (label.startsWith('📚')) {
+                                    return [
+                                        `Subject: ${label.replace('📚 ', '')}`,
+                                        `Total Hours: ${hours}`
+                                    ];
+                                } else {
+                                    const status = topicCompleted[index] ? 'Completed' : 'In Progress';
+                                    return [
+                                        `Topic: ${label.replace('  • ', '')}`,
+                                        `Hours Spent: ${hoursIncrement}`,
+                                        `Total Hours: ${hours}`,
+                                        `Status: ${status}`
+                                    ];
+                                }
+                            }
+                        },
+                        backgroundColor: 'rgba(255, 255, 255, 0.9)',
+                        titleColor: '#000',
+                        bodyColor: '#000',
+                        borderColor: '#ddd',
+                        borderWidth: 1,
+                        padding: 10,
+                        displayColors: false
+                    },
+                    legend: {
+                        display: true,
+                        position: 'top',
+                        labels: {
+                            font: {
+                                size: 14
+                            },
+                            padding: 20
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: 'Cumulative Hours',
+                            font: {
+                                size: 14,
+                                weight: 'bold'
+                            },
+                            padding: 10
+                        },
+                        grid: {
+                            color: 'rgba(0, 0, 0, 0.1)'
+                        }
+                    },
+                    x: {
+                        title: {
+                            display: true,
+                            text: 'Subjects and Topics',
+                            font: {
+                                size: 14,
+                                weight: 'bold'
+                            },
+                            padding: 10
+                        },
+                        ticks: {
+                            maxRotation: 45,
+                            minRotation: 45,
+                            font: {
+                                size: 12
+                            }
+                        },
+                        grid: {
+                            display: false
+                        }
+                    }
+                }
+            }
+        });
+
+        // Set up auto-refresh every 30 seconds
+        setInterval(updateChart, 30000);
+    });
+</script>
+{% endblock %}
+
+

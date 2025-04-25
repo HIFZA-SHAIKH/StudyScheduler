@@ -1,0 +1,55 @@
+{% extends 'scheduler/base.html' %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-12 text-center mb-4">
+        <h1 class="display-4">Welcome to Study Scheduler</h1>
+        <p class="lead">Your personal study planning and tracking assistant</p>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-4">
+        <div class="card h-100">
+            <div class="card-body text-center">
+                <i class="fas fa-calendar-alt fa-3x mb-3 text-primary"></i>
+                <h3 class="card-title">Plan Your Study</h3>
+                <p class="card-text">Create and manage your study schedule with our intuitive planning tools.</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card h-100">
+            <div class="card-body text-center">
+                <i class="fas fa-chart-line fa-3x mb-3 text-primary"></i>
+                <h3 class="card-title">Track Progress</h3>
+                <p class="card-text">Monitor your study hours and completion status for each topic.</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card h-100">
+            <div class="card-body text-center">
+                <i class="fas fa-tasks fa-3x mb-3 text-primary"></i>
+                <h3 class="card-title">Stay Organized</h3>
+                <p class="card-text">Keep track of your courses, subjects, and topics in one place.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-5">
+    <div class="col-md-12 text-center">
+        {% if user.is_authenticated %}
+            {% if user.is_admin %}
+                <a href="{% url 'admin_dashboard' %}" class="btn btn-primary btn-lg">Go to Admin Dashboard</a>
+            {% else %}
+                <a href="{% url 'user_dashboard' %}" class="btn btn-primary btn-lg">Go to Dashboard</a>
+            {% endif %}
+        {% else %}
+            <a href="{% url 'login' %}" class="btn btn-primary btn-lg me-3">Login</a>
+            <a href="{% url 'register' %}" class="btn btn-outline-primary btn-lg">Register</a>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

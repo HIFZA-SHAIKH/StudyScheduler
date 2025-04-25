@@ -1,0 +1,45 @@
+{% extends 'scheduler/base.html' %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-body">
+                <h2 class="card-title">Admin Dashboard</h2>
+                <div class="row mt-4">
+                    <div class="col-md-4">
+                        <div class="card h-100">
+                            <div class="card-body text-center">
+                                <i class="fas fa-book fa-3x mb-3 text-primary"></i>
+                                <h3 class="card-title">Courses</h3>
+                                <p class="card-text">Manage your courses</p>
+                                <a href="{% url 'add_course' %}" class="btn btn-primary">Add Course</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="card h-100">
+                            <div class="card-body text-center">
+                                <i class="fas fa-graduation-cap fa-3x mb-3 text-primary"></i>
+                                <h3 class="card-title">Subjects</h3>
+                                <p class="card-text">Manage your subjects</p>
+                                <a href="{% url 'add_subject' %}" class="btn btn-primary">Add Subject</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="card h-100">
+                            <div class="card-body text-center">
+                                <i class="fas fa-tasks fa-3x mb-3 text-primary"></i>
+                                <h3 class="card-title">Topics</h3>
+                                <p class="card-text">Manage your topics</p>
+                                <a href="{% url 'add_topic' %}" class="btn btn-primary">Add Topic</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,397 @@
+{% extends 'scheduler/base.html' %}
+
+{% block extra_css %}
+<style>
+    .topic-item {
+        margin-bottom: 20px;
+        padding: 15px;
+        border: 1px solid #ddd;
+        border-radius: 5px;
+    }
+    
+    .time-input-controls {
+        margin-top: 10px;
+    }
+    
+    .time-input-group {
+        display: flex;
+        align-items: center;
+        margin-bottom: 10px;
+    }
+    
+    .time-input {
+        width: 60px;
+        padding: 5px;
+        margin: 0 10px 0 5px;
+        border: 1px solid #ddd;
+        border-radius: 3px;
+    }
+    
+    .add-time-btn, .mark-done {
+        display: inline-block;
+        padding: 5px 10px;
+        margin-right: 10px;
+        border-radius: 3px;
+        cursor: pointer;
+        text-decoration: none;
+    }
+    
+    .add-time-btn {
+        background-color: #4CAF50;
+        color: white;
+        border: none;
+    }
+    
+    .mark-done {
+        background-color: #2196F3;
+        color: white;
+    }
+    
+    .completed-badge {
+        background-color: #4CAF50;
+        color: white;
+        padding: 5px 10px;
+        border-radius: 3px;
+    }
+
+    .select-container {
+        margin-bottom: 20px;
+    }
+
+    .select-container select {
+        width: 100%;
+        padding: 8px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        background-color: white;
+    }
+
+    .chart-container {
+        height: 300px;
+        margin-top: 20px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <h2 class="mb-0">User Dashboard</h2>
+                <div>
+                    
+                    <a href="{% url 'logout' %}" class="btn btn-outline-danger">
+                        <i class="fas fa-sign-out-alt"></i> Logout
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-4">
+            <!-- Course Selection -->
+            <div class="card mb-4">
+                <div class="card-body">
+                    <h3 class="card-title h5">Select Course</h3>
+                    <form method="GET" action="" class="select-container">
+                        <select name="course_id" onchange="this.form.submit()" class="form-select">
+                            <option value="">-- Select Course --</option>
+                            {% for course in courses %}
+                                <option value="{{ course.id }}" {% if selected_course_id|add:"0" == course.id %}selected{% endif %}>
+                                    {{ course.name }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </form>
+
+                    <!-- Subject Selection -->
+                    {% if selected_course %}
+                        <h3 class="card-title h5 mt-4">Select Subject</h3>
+                        <form method="GET" action="" class="select-container">
+                            <input type="hidden" name="course_id" value="{{ selected_course.id }}">
+                            <select name="subject_id" onchange="this.form.submit()" class="form-select">
+                                <option value="">-- Select Subject --</option>
+                                {% for subject in subjects %}
+                                    <option value="{{ subject.id }}" {% if selected_subject_id|add:"0" == subject.id %}selected{% endif %}>
+                                        {{ subject.name }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        </form>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-8">
+            <!-- Topic List -->
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Topics</h5>
+                </div>
+                <div class="card-body">
+                    {% if topics %}
+                        <div class="list-group">
+                            {% for topic in topics %}
+                                <div class="list-group-item">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <h6 class="mb-0">{{ topic.name }}</h6>
+                                        <div class="d-flex align-items-center">
+                                            <span class="badge bg-primary me-2">Hours Spent: <span class="hours-spent-{{ topic.id }}">{{ topic.hours_spent }}</span></span>
+                                            <button class="btn btn-sm btn-outline-primary me-2 start-timer" data-topic-id="{{ topic.id }}">
+                                                <i class="fas fa-play"></i> Start Timer
+                                            </button>
+                                            <button class="btn btn-sm btn-outline-danger me-2 stop-timer d-none" data-topic-id="{{ topic.id }}">
+                                                <i class="fas fa-stop"></i> Stop Timer
+                                            </button>
+                                            <div class="timer-display d-none" data-topic-id="{{ topic.id }}">
+                                                <span class="badge bg-info">00:00:00</span>
+                                            </div>
+                                            <a href="{% url 'mark_done' topic.id %}" class="btn btn-sm btn-success ms-2">
+                                                <i class="fas fa-check"></i> Mark as Done
+                                            </a>
+                                        </div>
+                                    </div>
+                                    <div class="mt-2">
+                                        <form class="time-form" data-topic-id="{{ topic.id }}">
+                                            {% csrf_token %}
+                                            <div class="row g-2">
+                                                <div class="col-auto">
+                                                    <input type="number" class="form-control form-control-sm" id="hours-{{ topic.id }}" name="hours" min="0" value="0" placeholder="Hours">
+                                                </div>
+                                                <div class="col-auto">
+                                                    <input type="number" class="form-control form-control-sm" id="minutes-{{ topic.id }}" name="minutes" min="0" max="59" value="0" placeholder="Minutes">
+                                                </div>
+                                                <div class="col-auto">
+                                                    <button type="submit" class="btn btn-sm btn-primary">
+                                                        <i class="fas fa-plus"></i> Add Time
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </form>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <p class="text-muted">No topics available for this subject.</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Progress Chart -->
+            <div class="card mt-4">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Study Progress</h5>
+                </div>
+                <div class="card-body">
+                    <div class="chart-container">
+                        <canvas id="progressChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        let activeTimer = null;
+        let startTime = null;
+        let timerInterval = null;
+        
+        // Timer functionality
+        document.querySelectorAll('.start-timer').forEach(button => {
+            button.addEventListener('click', function() {
+                const topicId = this.getAttribute('data-topic-id');
+                
+                // Hide all other timer controls
+                document.querySelectorAll('.start-timer, .stop-timer, .timer-display').forEach(el => {
+                    el.classList.add('d-none');
+                });
+                
+                // Show timer controls for this topic
+                this.classList.add('d-none');
+                document.querySelector(`.stop-timer[data-topic-id="${topicId}"]`).classList.remove('d-none');
+                document.querySelector(`.timer-display[data-topic-id="${topicId}"]`).classList.remove('d-none');
+                
+                // Start the timer
+                startTime = new Date();
+                activeTimer = topicId;
+                
+                timerInterval = setInterval(() => {
+                    const now = new Date();
+                    const diff = now - startTime;
+                    
+                    const hours = Math.floor(diff / 3600000);
+                    const minutes = Math.floor((diff % 3600000) / 60000);
+                    const seconds = Math.floor((diff % 60000) / 1000);
+                    
+                    const display = document.querySelector(`.timer-display[data-topic-id="${topicId}"] .badge`);
+                    display.textContent = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+                }, 1000);
+            });
+        });
+        
+        document.querySelectorAll('.stop-timer').forEach(button => {
+            button.addEventListener('click', function() {
+                const topicId = this.getAttribute('data-topic-id');
+                
+                if (timerInterval) {
+                    clearInterval(timerInterval);
+                }
+                
+                if (startTime) {
+                    const endTime = new Date();
+                    const diff = endTime - startTime;
+                    
+                    const hours = Math.floor(diff / 3600000);
+                    const minutes = Math.floor((diff % 3600000) / 60000);
+                    
+                    // Automatically submit the time
+                    const form = document.querySelector(`.time-form[data-topic-id="${topicId}"]`);
+                    document.getElementById(`hours-${topicId}`).value = hours;
+                    document.getElementById(`minutes-${topicId}`).value = minutes;
+                    form.dispatchEvent(new Event('submit'));
+                }
+                
+                // Reset timer display
+                startTime = null;
+                activeTimer = null;
+                
+                // Hide timer controls
+                this.classList.add('d-none');
+                document.querySelector(`.start-timer[data-topic-id="${topicId}"]`).classList.remove('d-none');
+                document.querySelector(`.timer-display[data-topic-id="${topicId}"]`).classList.add('d-none');
+            });
+        });
+        
+        // Handle time form submission
+        document.querySelectorAll('.time-form').forEach(form => {
+            form.addEventListener('submit', function(e) {
+                e.preventDefault();
+                
+                const topicId = this.getAttribute('data-topic-id');
+                const hours = document.getElementById(`hours-${topicId}`).value;
+                const minutes = document.getElementById(`minutes-${topicId}`).value;
+                
+                const csrfToken = this.querySelector('[name=csrfmiddlewaretoken]').value;
+                
+                const formData = new FormData();
+                formData.append('hours', hours);
+                formData.append('minutes', minutes);
+                
+                fetch(`/topic/${topicId}/add-time/`, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': csrfToken
+                    },
+                    body: formData
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok');
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    if (data.status === 'success') {
+                        // Update hours spent display
+                        const hoursSpentElement = document.querySelector(`.hours-spent-${topicId}`);
+                        if (hoursSpentElement) {
+                            hoursSpentElement.textContent = data.hours_spent;
+                        }
+                        
+                        // Reset form
+                        document.getElementById(`hours-${topicId}`).value = 0;
+                        document.getElementById(`minutes-${topicId}`).value = 0;
+                        
+                        // Update progress chart
+                        updateProgressChart();
+                        
+                        // Show success message
+                        alert(`Successfully added ${hours} hours and ${minutes} minutes to your study time!`);
+                    } else {
+                        throw new Error(data.error || 'Error adding time');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('Error adding time: ' + error.message);
+                });
+            });
+        });
+        
+        // Progress Chart
+        let progressChart = null;
+        
+        function updateProgressChart() {
+            const topicElements = document.querySelectorAll('.list-group-item');
+            const labels = [];
+            const data = [];
+            
+            topicElements.forEach(element => {
+                const topicName = element.querySelector('h6').textContent;
+                const hoursSpentElement = element.querySelector('[class^="hours-spent-"]');
+                if (hoursSpentElement) {
+                    const hoursSpent = parseFloat(hoursSpentElement.textContent);
+                    if (!isNaN(hoursSpent)) {
+                        labels.push(topicName);
+                        data.push(hoursSpent);
+                    }
+                }
+            });
+            
+            if (progressChart) {
+                progressChart.destroy();
+            }
+            
+            const ctx = document.getElementById('progressChart').getContext('2d');
+            progressChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Hours Spent',
+                        data: data,
+                        backgroundColor: 'rgba(54, 162, 235, 0.5)',
+                        borderColor: 'rgba(54, 162, 235, 1)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: 'Hours'
+                            }
+                        }
+                    },
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: 'Study Progress by Topic'
+                        },
+                        legend: {
+                            display: true,
+                            position: 'top'
+                        }
+                    }
+                }
+            });
+        }
+        
+        // Initial chart update
+        updateProgressChart();
+    });
+</script>
+{% endblock %}
